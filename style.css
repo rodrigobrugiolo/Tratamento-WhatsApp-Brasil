@@ -1,0 +1,140 @@
+body {
+    margin: 0;
+    font-family: sans-serif;
+    background: #2D1556;
+    color: #CFCED9;
+  }
+  
+  header {
+    background: #2D1556;
+    border-bottom: 4px solid #814FC3;
+    padding: 24px;
+    text-align: center;
+  }
+  
+  header h1 {
+    color: #FFFFFF;
+    margin: 0;
+  }
+  
+  main {
+    padding: 40px 24px;
+    max-width: 800px;
+    margin: auto;
+  }
+  
+  .card {
+    background: #FFFFFF;
+    border-radius: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    padding: 32px;
+    margin-top: 30px;
+    color: #2D1556;
+  }
+  
+  .card h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+  }
+  
+  .disclaimer {
+    font-size: 14px;
+    color: #6c6b7b;
+    margin-bottom: 20px;
+  }
+  
+  input[type="file"] {
+    display: block;
+    padding: 12px 15px;
+    border: 1px solid #CFCED9;
+    border-radius: 20px;
+    width: 100%;
+    margin-bottom: 24px;
+    background-color: #FFFFFF;
+    color: #2D1556;
+    cursor: pointer;
+  }
+  
+  input[type="file"]::file-selector-button {
+    background: #814FC3;
+    color: #FFFFFF;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    margin-right: 10px;
+  }
+  
+  input[type="file"]::file-selector-button:hover {
+    background: #6a3fa3;
+  }
+  
+  button {
+    background: #814FC3;
+    border: none;
+    padding: 12px 28px;
+    color: #FFFFFF;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    margin-right: 10px;
+    margin-top: 10px;
+  }
+  
+  button:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 15px rgba(129,79,195,0.4);
+  }
+  
+  a.download-link {
+    display: inline-block;
+    margin-top: 24px;
+    text-decoration: none;
+    color: #814FC3;
+  }
+  
+  a.download-link:hover {
+    color: #2D1556;
+    text-decoration: underline;
+  }
+  
+  #previewContainer {
+    margin-top: 30px;
+    overflow-x: auto;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 24px;
+  }
+  
+  table, th, td {
+    border: 1px solid #CFCED9;
+  }
+  
+  th {
+    background-color: #f8f7fa;
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 500;
+    color: #2D1556;
+  }
+  
+  td {
+    padding: 12px 15px;
+    text-align: left;
+    color: #2D1556;
+  }
+  
+  footer {
+    text-align: center;
+    padding: 24px;
+    background: #2D1556;
+    margin-top: 50px;
+    color: #CFCED9;
+  }
+  
