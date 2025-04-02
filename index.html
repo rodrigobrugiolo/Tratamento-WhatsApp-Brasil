@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Processador de CSV - Superfuncionário</title>
+  <!-- PapaParse para processar o CSV -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <style>
+    /* Estilização básica */
+    body { margin: 0; font-family: sans-serif; background: #2D1556; color: #CFCED9; }
+    header { background: #2D1556; border-bottom: 4px solid #814FC3; padding: 24px; text-align: center; }
+    header h1 { color: #FFFFFF; margin: 0; }
+    main { padding: 40px 24px; max-width: 800px; margin: auto; }
+    .card { background: #FFFFFF; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            padding: 32px; margin-top: 30px; color: #2D1556; }
+    .card h2 { margin-top: 0; margin-bottom: 20px; }
+    input[type="file"] {
+      display: block; padding: 12px 15px; border: 1px solid #CFCED9; border-radius: 20px; width: 100%;
+      margin-bottom: 24px; background-color: #FFFFFF; color: #2D1556; cursor: pointer;
+    }
+    input[type="file"]::file-selector-button {
+      background: #814FC3; color: #FFFFFF; border: none; padding: 10px 15px; border-radius: 15px;
+      cursor: pointer; transition: background 0.3s ease; margin-right: 10px;
+    }
+    input[type="file"]::file-selector-button:hover { background: #6a3fa3; }
+    button {
+      background: #814FC3; border: none; padding: 12px 28px; color: #FFFFFF; border-radius: 20px;
+      cursor: pointer; font-size: 16px; font-weight: 500; transition: transform 0.3s ease, box-shadow 0.3s ease;
+      margin-right: 10px; margin-top: 10px;
+    }
+    button:hover { transform: scale(1.03); box-shadow: 0 4px 15px rgba(129,79,195,0.4); }
+    a.download-link { display: inline-block; margin-top: 24px; text-decoration: none; color: #814FC3; }
+    a.download-link:hover { color: #2D1556; text-decoration: underline; }
+    #previewContainer { margin-top: 30px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 24px; }
+    table, th, td { border: 1px solid #CFCED9; }
+    th {
+      background-color: #f8f7fa; padding: 12px 15px; text-align: left; font-weight: 500; color: #2D1556;
+    }
+    td { padding: 12px 15px; text-align: left; color: #2D1556; }
+    footer { text-align: center; padding: 24px; background: #2D1556; margin-top: 50px; color: #CFCED9; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Superfuncionário</h1>
+  </header>
+  <main>
+    <div class="card">
+      <h2>Processador de CSV</h2>
+      <p>
+        Seleciona automaticamente a coluna de telefone, mesmo que contenha parênteses ou traços.<br>
+        Formata nome, sobrenome e ajusta DDD + “9” conforme as regras definidas.
+      </p>
+      <input type="file" id="csvFileInput" accept=".csv" />
+      <button id="processBtn">Processar CSV</button>
+      <a id="downloadLink" class="download-link" style="display:none;">Baixar CSV Processado</a>
+      <div id="previewContainer"></div>
+    </div>
+  </main>
+  <footer>
+    <p>© 2025 Superfuncionário. Todos os direitos reservados.</p>
+  </footer>
+
+  <script>
+    // Listas de nomes para identificar colunas
+    const PHONE_NAMES = ["telefone", "celular", "phone", "tel", "telephone"];
+    const NAME_NAMES = ["nome", "name"];
+    const SURNAME_NAMES = ["sobrenome", "lastname"];
+    const NUMERIC_THRESHOLD = 0.70;
+
+    // Função para normalizar nomes de cabeçalho
+    function normalizeHeaderName(header) {
+      return header.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+    }
+
+    // Função para capitalizar as palavras
+    function capitalizeWords(str) {
+      if (!str) return "";
+      const words = str.trim().split(/\s+/);
+      return words.map(w => {
+        const lower = w.toLowerCase();
+        return lower.charAt(0).toUpperCase() + lower.slice(1);
+      }).join(" ");
+    }
+
+    // Função para detectar automaticamente a coluna de telefone
+    function detectPhoneColumn(items, allHeaders) {
+      let bestColumn = null;
+      let bestRatio = 0;
+      for (const header of allHeaders) {
+        let numericCount = 0;
+        let nonEmptyCount = 0;
+        for (const row of items) {
+          const val = (row[header] || "").toString().trim();
+          if (val !== "") {
+            nonEmptyCount++;
+            const justDigits = val.replace(/\D/g, "");
+            const noSpacesLen = val.replace(/\s+/g, "").length;
+            const ratio = (noSpacesLen > 0) ? justDigits.length / noSpacesLen : 0;
+            if (ratio >= 0.7) {
+              numericCount++;
+            }
+          }
+        }
+        if (nonEmptyCount > 0) {
+          const colRatio = numericCount / nonEmptyCount;
+          if (colRatio > bestRatio) {
+            bestRatio = colRatio;
+            bestColumn = header;
+          }
+        }
+      }
+      return (bestRatio >= NUMERIC_THRESHOLD) ? bestColumn : null;
+    }
+
+    // Função para formatar o número de telefone
+    function formatPhone(val) {
+      if (!val) return "";
+      let phone = val.toString().replace(/\D/g, '');
+      if (phone.startsWith("55")) {
+        phone = phone.slice(2);
+      }
+      if (phone.length >= 10 && phone.length <= 11) {
+        const ddd = phone.slice(0, 2);
+        let numero = phone.slice(2);
+        const dddInt = parseInt(ddd, 10);
+        if (dddInt >= 11 && dddInt <= 29) {
+          if (numero.length === 8) {
+            numero = '9' + numero;
+          }
+        } else if (dddInt >= 30) {
+          if (numero.length === 9 && numero.startsWith("9")) {
+            numero = numero.slice(1);
+          }
+        }
+        return `55${ddd}${numero}`;
+      }
+      return val.toString();
+    }
+
+    // Função para exibir uma prévia dos dados processados em forma de tabela
+    function displayPreviewTable(data, maxRows = 10) {
+      const container = document.getElementById('previewContainer');
+      container.innerHTML = '<h3>Preview dos Dados Processados (primeiras linhas)</h3>';
+      const table = document.createElement('table');
+      const displayData = data.slice(0, maxRows + 1);
+      displayData.forEach((row, rowIndex) => {
+        const tr = document.createElement('tr');
+        row.forEach(cell => {
+          const cellElement = document.createElement(rowIndex === 0 ? 'th' : 'td');
+          cellElement.textContent = cell;
+          tr.appendChild(cellElement);
+        });
+        table.appendChild(tr);
+      });
+      container.appendChild(table);
+      if (data.length > maxRows + 1) {
+        const note = document.createElement('p');
+        note.textContent = `Exibindo ${maxRows} de ${data.length - 1} linhas de dados.`;
+        note.style.fontSize = '14px';
+        note.style.color = '#6c6b7b';
+        container.appendChild(note);
+      }
+    }
+
+    // Manipulador do botão de processar CSV
+    document.getElementById('processBtn').addEventListener('click', () => {
+      const fileInput = document.getElementById('csvFileInput');
+      if (!fileInput.files.length) {
+        alert("Por favor, selecione um arquivo CSV.");
+        return;
+      }
+
+      // Limpa dados anteriores
+      document.getElementById('previewContainer').innerHTML = '';
+      document.getElementById('downloadLink').style.display = 'none';
+
+      const file = fileInput.files[0];
+
+      // Processa o CSV sem cabeçalho (header: false)
+      Papa.parse(file, {
+        header: false,
+        skipEmptyLines: true,
+        complete: function(results) {
+          const data = results.data; // array de arrays
+          if (!data || data.length === 0) {
+            alert("O arquivo CSV está vazio ou não pôde ser lido corretamente.");
+            return;
+          }
+
+          // Cria cabeçalho automaticamente com base no número de colunas
+          // Neste exemplo, o primeiro campo é "nome", o segundo "telefone" e os demais recebem nomes genéricos.
+          const colCount = data[0].length;
+          let headers = [];
+          if (colCount > 0) headers.push("nome");
+          if (colCount > 1) headers.push("telefone");
+          for (let i = 2; i < colCount; i++) {
+            headers.push("coluna " + (i + 1));
+          }
+
+          // Converte array de arrays para array de objetos usando os cabeçalhos criados
+          const items = data.map(row => {
+            let obj = {};
+            headers.forEach((h, i) => {
+              obj[h] = row[i] || "";
+            });
+            return obj;
+          });
+
+          // Detecta colunas explícitas conforme listas definidas
+          const explicitNameCols = headers.filter(h =>
+            NAME_NAMES.includes(normalizeHeaderName(h))
+          );
+          const explicitSurnameCols = headers.filter(h =>
+            SURNAME_NAMES.includes(normalizeHeaderName(h))
+          );
+          const explicitPhoneCols = headers.filter(h =>
+            PHONE_NAMES.includes(normalizeHeaderName(h))
+          );
+
+          // Se não houver coluna explícita de telefone, tenta detectar automaticamente
+          let detectedPhoneCol = null;
+          if (explicitPhoneCols.length === 0) {
+            detectedPhoneCol = detectPhoneColumn(items, headers);
+          }
+
+          // DEBUG opcional
+          console.log("Colunas detectadas:");
+          console.log("Nomes:", explicitNameCols);
+          console.log("Sobrenomes:", explicitSurnameCols);
+          console.log("Telefones:", explicitPhoneCols.length > 0 ? explicitPhoneCols : detectedPhoneCol);
+
+          // Processa cada linha formatando os dados
+          const updated = items.map(row => {
+            const newRow = { ...row };
+
+            explicitNameCols.forEach(col => {
+              if (newRow[col]) {
+                newRow[col] = capitalizeWords(newRow[col]);
+              }
+            });
+
+            explicitSurnameCols.forEach(col => {
+              if (newRow[col]) {
+                newRow[col] = capitalizeWords(newRow[col]);
+              }
+            });
+
+            if (explicitPhoneCols.length > 0) {
+              explicitPhoneCols.forEach(col => {
+                if (newRow[col]) {
+                  newRow[col] = formatPhone(newRow[col]);
+                }
+              });
+            } else if (detectedPhoneCol && newRow[detectedPhoneCol]) {
+              newRow[detectedPhoneCol] = formatPhone(newRow[detectedPhoneCol]);
+            }
+
+            return newRow;
+          });
+
+          // Prepara dados para a pré-visualização (inclui o cabeçalho)
+          let processedData = [];
+          processedData.push(headers);
+          updated.forEach(obj => {
+            const row = headers.map(h => obj[h]);
+            processedData.push(row);
+          });
+          displayPreviewTable(processedData, 10);
+
+          // Converte de volta para CSV com cabeçalho para download
+          const csv = Papa.unparse(updated, { header: true });
+          const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+
+          const dlLink = document.getElementById('downloadLink');
+          dlLink.href = url;
+          dlLink.download = `processado_${file.name}`;
+          dlLink.style.display = 'inline-block';
+        },
+        error: function(err) {
+          alert("Erro ao processar o arquivo CSV: " + err);
+          document.getElementById('downloadLink').style.display = 'none';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
